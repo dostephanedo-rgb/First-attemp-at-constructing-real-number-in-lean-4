@@ -1,0 +1,10 @@
+name = "Math storage"
+version = "0.1.0"
+defaultTargets = ["math storage"]
+
+[[lean_lib]]
+name = "«Math storage»"
+
+[[lean_exe]]
+name = "math storage"
+root = "Main"
