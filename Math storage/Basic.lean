@@ -9,9 +9,12 @@ def s := NaturalNumber.Successor
 theorem SuccessorNotEqualZero ( n : N ) : s n ≠ 0 := by
 intro h
 contradiction
-theorem Injective (a b : N)  : s a = s b → a = b := by
+theorem SuccessorInjective (a b : N)  : s a = s b ↔ a = b := by
+constructor
 intro h
 injection h
+intro h
+rw [h]
 -- define Adition
 def NaturalNumber.Add (n m : NaturalNumber) : NaturalNumber :=
 match n with
@@ -30,34 +33,51 @@ theorem AdditionZero (a : N): a + 0 = a := by
 induction a with
 | Zero => rfl
 | Successor n ih =>
-calc
-  s n + 0 = s (n+0) := by rfl
-  s (n+0) = s (n) := by rw [ih]
+  calc
+    s n + 0 = s (n+0) := by rfl
+    s (n+0) = s (n) := by rw [ih]
 theorem AdditionSuccessor (a b : N): a + s b = s (a+b) := by
 induction a with
 | Zero => rfl
 | Successor n ih =>
-change s n + s b = s (s (n) + b)
-calc
-  s n + s b = s (n + s b) := by rfl
-  s (n + s b) = s (s (n+b)) := by rw [ih]
+  change s n + s b = s (s (n) + b)
+  calc
+    s n + s b = s (n + s b) := by rfl
+    s (n + s b) = s (s (n+b)) := by rw [ih]
 theorem AdditionCommutative (a b : N): a + b = b + a := by
 induction a with
 | Zero =>
-change 0+b = b+0
-rw [AdditionZero]
-rfl
+  change 0+b = b+0
+  rw [AdditionZero]
+  rfl
 | Successor n ih =>
-change s n + b = b + s n
-rw [AdditionSuccessor, ← ih]
-rfl
+  change s n + b = b + s n
+  rw [AdditionSuccessor, ← ih]
+  rfl
 theorem AssociativeAddition (a b c : N): (a + b) + c = a + (b + c) := by
 induction a with
 | Zero =>
-change (0+b)+c = 0 + (b+c)
-rfl
+  change (0+b)+c = 0 + (b+c)
+  rfl
 | Successor n ih =>
-change (s n + b) + c = s n + (b + c)
-calc
-  (s n + b) + c = s (n+b+c) := by rfl
-  s (n+b+c) = s (n+(b+c)) := by rw [ih]
+  change (s n + b) + c = s n + (b + c)
+  calc
+    (s n + b) + c = s (n+b+c) := by rfl
+    s (n+b+c) = s (n+(b+c)) := by rw [ih]
+theorem AdditionEquality (a b c : N): a + c = b + c ↔ a = b:= by
+constructor
+{
+  induction c with
+  |Zero =>
+    change a + 0 = b + 0 → a = b
+    simp [AdditionZero]
+  |Successor n ih =>
+    change a + s n = b + s n → a = b
+    simp [AdditionSuccessor]
+    rw [SuccessorInjective]
+    exact ih
+}
+{
+  intro h
+  rw [h]
+}
