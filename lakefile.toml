@@ -1,6 +1,6 @@
 name = "Math storage"
 version = "0.1.0"
-defaultTargets = ["math storage"]
+defaultTargets = ["«Math storage».Basic"]
 
 [[lean_lib]]
 name = "«Math storage»"
