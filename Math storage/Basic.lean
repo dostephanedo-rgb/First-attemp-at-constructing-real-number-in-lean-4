@@ -1,3 +1,4 @@
+open Classical
 -- Peano's 5 axioms
 inductive NaturalNumber: Type where
 |Zero : NaturalNumber
@@ -112,14 +113,22 @@ constructor
   rfl
 }
 -- Convinient Natural Number Addition theorem
-theorem AdditionCancelation (a b: N): a + b = b → a = 0 := by
-intro h
-conv at h =>
-  right
-  rw [← AdditionZero b]
-conv at h =>
-  rw [AdditionCommutative b,AdditionEquality]
-exact h
+theorem AdditionCancelation (a b: N): a + b = b ↔ a = 0 := by
+constructor
+{
+  intro h
+  conv at h =>
+    right
+    rw [← AdditionZero b]
+  conv at h =>
+    rw [AdditionCommutative b,AdditionEquality]
+  exact h
+}
+{
+  intro h
+  simp [h]
+  rfl
+}
 theorem AdditionSwap (a b c : N): a+b+c = a+c+b := by
   rw [AdditionAssociative]
   rw [AdditionCommutative b c]
@@ -143,73 +152,6 @@ constructor
 {
   intro h
   exact h
-}
-theorem NaturalNumberIfNotGreaterOrLessThenItEqual (a b : N) : ¬ (a < b) ∧ ¬ (a > b) ↔ a = b := by
-constructor
-{
-  intro ⟨h1, h2⟩
-  revert h1 h2
-  revert a
-  induction b with
-  |Zero =>
-    intro a h1 h2
-    cases a with
-    |Zero =>
-    trivial
-    | Successor m =>
-      exfalso
-      apply h2
-      exists m
-  | Successor n ih=>
-    intro a h1 h2
-    cases a with
-    |Zero =>
-    exfalso
-    apply h1
-    exists n
-    | Successor m =>
-    change s m = s n
-    rw [SuccessorInjective]
-    apply ih
-    {
-      intro ⟨k, hk⟩
-      apply h1
-      change s m < s n
-      exists k
-      rw [AdditionSuccessor, SuccessorInjective, AdditionCommutative, AdditionSuccessor]
-      rw [← hk]
-      rw [AdditionSuccessor,AdditionCommutative]
-    }
-    {
-      intro ⟨k, hk⟩
-      apply h2
-      exists k
-      change s n + s k = s m
-      rw [AdditionCommutative,AdditionSuccessor,AdditionCommutative,hk, SuccessorInjective]
-    }
-}
-{
-  intro h1
-  rw [h1]
-  constructor
-  {
-    intro ⟨k, hk⟩
-    conv at hk =>
-      right
-      rw [← AdditionZero b]
-    rw [AdditionCommutative,AdditionCommutative b 0, AdditionEquality] at hk
-    apply SuccessorNotEqualZero k
-    exact hk
-  }
-  {
-    intro ⟨k, hk⟩
-    conv at hk =>
-      right
-      rw [← AdditionZero b]
-    rw [AdditionCommutative,AdditionCommutative b 0, AdditionEquality] at hk
-    apply SuccessorNotEqualZero k
-    exact hk
-  }
 }
 theorem NaturalNumberNotEqualImplication (a b: N): a < b ∨ b < a ↔ a ≠ b := by
   constructor
@@ -282,6 +224,11 @@ theorem NaturalNumberNotEqualImplication (a b: N): a < b ∨ b < a ↔ a ≠ b :
           rw [AdditionCommutative,AdditionSuccessor,SuccessorInjective, AdditionCommutative]
           exact hk
   }
+theorem AdditionSelfWithSuccessorIsNotLessThan (a b: N): a + s b < a → False := by
+intro ⟨k, hk⟩
+change a + s b + s k = 0 + a at hk
+rw [AdditionAssociative,AdditionCommutative,AdditionEquality,AdditionSuccessor] at hk
+contradiction
 -- define NaturalNumberMultiplication
 def NaturalNumber.Multiplication (n m : NaturalNumber): NaturalNumber :=
 match n with
@@ -447,6 +394,7 @@ def EquivalenceDifference (p₁ p₂ : NaturalPair) : Prop :=
   let (a, b) := p₁
   let (c, d) := p₂
   a + d = c + b
+@[simp]
 instance : Setoid NaturalPair where
   r := EquivalenceDifference
   iseqv := by
@@ -490,11 +438,15 @@ instance : Setoid NaturalPair where
       exact h₂
     }
     done
-def Interger : Type := Quot EquivalenceDifference
+def Interger : Type := Quotient (inferInstance: Setoid NaturalPair)
 def NaturalPairToInterger (a :NaturalPair):
 Interger := Quot.mk EquivalenceDifference a
+def Interger.ofNat : Nat → Interger
+| 0 => Quotient.mk (inferInstance: Setoid NaturalPair) (0,0)
+| n + 1 => Quotient.mk (inferInstance: Setoid NaturalPair) (NaturalNumber.ofNat (n + 1), NaturalNumber.ofNat (0) )
 instance : OfNat Interger n where
-  ofNat := Quot.mk EquivalenceDifference (NaturalNumber.ofNat n, 0)
+  ofNat := Interger.ofNat (n)
+attribute [simp] HasEquiv.Equiv Setoid.r EquivalenceDifference Interger.ofNat NaturalNumber.ofNat
 -- define IntergerAddition and IntergerSubtraction
 def PairAddition (a b : NaturalPair):
 NaturalPair := (a.1+b.1, a.2+b.2)
@@ -539,6 +491,7 @@ def IntergerAddition : Interger → Interger → Interger :=
           | mk c d
           cases q2 with
           | mk c' d'
+          dsimp [Setoid.r]
           simp [PairAddition, EquivalenceDifference, ← AdditionAssociative] at *
           rw [AdditionSwap a c b]
           rw [AdditionSwap a c' b]
@@ -575,6 +528,7 @@ Quot.lift
     | mk a1 a2 =>
     cases b with
     | mk b1 b2 =>
+    dsimp [Setoid.r]
     simp [EquivalenceDifference, PairNegation] at *
     rw [AdditionCommutative]
     rw [← h]
@@ -583,6 +537,71 @@ Quot.lift
 def IntergerSubtraction (x y : Interger) : Interger := x + (IntergerNegation y)
 instance : Sub Interger where
   sub := IntergerSubtraction
+-- define absoluteValue
+noncomputable def PairAbsoluteValue (p: NaturalPair) : NaturalPair :=
+if p.1 > p.2 then p else (p.2,p.1)
+@[simp]
+theorem PairAbsoluteValueOrdered (a b : N ) (h : a > b): PairAbsoluteValue (a, b) = (a, b) := by
+unfold PairAbsoluteValue
+simp [h]
+@[simp]
+theorem PairAbsoluteValueUnordred (a b : N) (h : b > a): PairAbsoluteValue (a, b) = (b, a) := by
+unfold PairAbsoluteValue
+simp
+intro ⟨k, hk ⟩
+cases h with
+| intro j hj =>
+  rw [← hk,AdditionAssociative,AdditionCommutative,AdditionCancelation,AdditionSuccessor] at hj
+  contradiction
+noncomputable def IntergerAbsoluteValue: Interger → Interger :=
+Quotient.lift
+(
+  fun p => Quotient.mk _ (PairAbsoluteValue p)
+)
+(
+  by
+  intro a b h
+  apply Quotient.sound
+  cases a with
+  | mk a1 a2 =>
+  cases b with
+  | mk b1 b2 =>
+    dsimp [HasEquiv.Equiv,Setoid.r,EquivalenceDifference] at h
+    have h1 : a1 = a2 ∨ a1 ≠ a2 := Classical.em (a1 = a2)
+    cases h1 with
+    | inl h1 =>
+      rw [h1,AdditionCommutative,AdditionEquality] at h
+      simp [h,h1,PairAbsoluteValue]
+      rw [AdditionCommutative]
+    | inr h1 =>
+      rw [← NaturalNumberNotEqualImplication] at h1
+      cases h1 with
+      | inl h1 =>
+        change a2 > a1 at h1
+        cases h1 with
+        | intro k hk
+        rw [← hk,← AdditionAssociative,AdditionSwap,AdditionCommutative,AdditionEquality] at h
+        have h1 : a2 > a1 := by{exists k}
+        have h2 : b2 > b1 := by
+        {
+          exists k
+          symm
+          exact h
+        }
+        simp [h1, h2]
+        simp [h,← hk,AdditionSwap,AdditionEquality]
+        rw [AdditionCommutative]
+      | inr h1 =>
+        have h2 := h
+        have h3 := h1
+        cases h3 with
+        | intro k hk
+        rw [← hk,AdditionAssociative,AdditionCommutative,AdditionEquality,AdditionCommutative] at h2
+        have h2 : b1>b2 := by exists k
+        change a1 > a2 at h1
+        simp [h2,h1]
+        exact h
+)
 -- define IntergerMultiplication
 def PairMultiplication (p q : NaturalPair): NaturalPair :=
   ((p.1 * q.1 + p.2 * q.2), (p.1*q.2+p.2*q.1))
@@ -649,7 +668,7 @@ theorem IntergerAdditionZero (a : Interger): a + 0 = a := by
     apply Quot.sound
     induction x with
     | mk a b =>
-      simp [EquivalenceDifference, PairAddition]
+      simp [PairAddition]
       change a + 0 + b = a + (b + 0)
       simp [AdditionZero]
 theorem IntergerAdditionCommutative (a b : Interger): a + b = b + a := by
@@ -662,7 +681,7 @@ induction b using Quot.ind with
     | mk a b =>
     induction y with
     | mk c d =>
-      simp[EquivalenceDifference, PairAddition]
+      simp[Setoid.r, PairAddition, EquivalenceDifference]
       simp [AdditionCommutative]
 theorem IntergerAdditionAssociative (a b c : Interger): a + b + c = a + ( b + c ) := by
   induction a using Quot.ind with
@@ -678,9 +697,9 @@ theorem IntergerAdditionAssociative (a b c : Interger): a + b + c = a + ( b + c 
     | mk b1 b2 =>
     induction C with
     | mk c1 c2 =>
-      simp [EquivalenceDifference, PairAddition]
+      simp [Setoid.r,EquivalenceDifference, PairAddition]
       simp [AdditionAssociative]
--- Algebraic Manipulation
+-- Algebraic Manipulation For interger part 1 (Addition and Subtraction)
 theorem IntergerEqualitySubtraction (a b : Interger): a = b ↔ a - b = 0 := by
   induction a using Quot.ind with
   | _ A =>
@@ -709,15 +728,16 @@ theorem IntergerEqualitySubtraction (a b : Interger): a = b ↔ a - b = 0 := by
       | mk a1 a2 =>
       cases B with
       | mk b1 b2 =>
-        simp [PairAddition, PairNegation, EquivalenceDifference, AdditionZero, AdditionCommutative] at *
+        simp [Setoid.r,PairAddition, PairNegation, EquivalenceDifference, AdditionZero, AdditionCommutative] at *
         exact mh
     }
+@[simp]
 theorem IntergerSubtractionSimplication (a : Interger): a - a = 0 := by
   change a + IntergerNegation a = 0
   induction a using Quot.ind with
   | _ A =>
     apply Quot.sound
-    simp[EquivalenceDifference,PairAddition,PairNegation,AdditionZero]
+    simp[Setoid.r,EquivalenceDifference,PairAddition,PairNegation,AdditionZero]
     rw [AdditionCommutative]
     rfl
 theorem IntergerAdditionSwap (a : Interger): a + b + c = a + c  + b := by
@@ -748,16 +768,13 @@ theorem IntergerMultiplicationZero (a: Interger): a*0 = 0 := by
     | mk a1 a2 =>
       apply Quot.sound
       simp [EquivalenceDifference,PairMultiplication, MultiplicationZero, AdditionZero]
-      change a1 * 0 = 0 + (0+a2*0)
-      simp [MultiplicationZero]
-      rfl
 theorem IntergerMultiplicationIdentity (a: Interger): a * 1 = a := by
   induction a using Quot.ind with
     | _ A =>
       induction A with
         | mk a1 a2 =>
           apply Quot.sound
-          simp [EquivalenceDifference,PairMultiplication,MultiplicationZero,AdditionZero,AdditionCommutative]
+          simp [EquivalenceDifference,PairMultiplication,MultiplicationZero,AdditionCommutative]
           change a2 + a1 * 1 = a1 + a2 * 1
           simp [AdditionCommutative,MultiplicationIndentity]
 theorem IntergerMultiplicationLeftDistributiveAddition (a b c : Interger): a * ( b + c ) = (a * b) + (a * c) := by
@@ -786,6 +803,8 @@ theorem IntergerMultiplicationCommutative (a b: Interger): a * b = b * a := by
     | mk b1 b2 =>
       apply Quot.sound
       simp [EquivalenceDifference,PairMultiplication,← AdditionAssociative, AdditionSwap,MultiplicationCommutative]
+theorem IntergerMultiplicationRightDistributiveAddtion (a b c : Interger): (b + c) * a = (a * b) + (a * c) := by
+rw [IntergerMultiplicationCommutative,IntergerMultiplicationLeftDistributiveAddition]
 theorem IntergerMultiplicationAssociative (a b c : Interger): a * b * c = a * ( b * c ) := by
   induction a using Quot.ind with
   | _ A =>
@@ -818,7 +837,7 @@ constructor
       | inl equality =>
         left
         apply Quot.sound
-        simp [EquivalenceDifference,AdditionZero]
+        simp [AdditionZero]
         change a1 = a2
         exact equality
       | inr inequality =>
@@ -832,7 +851,8 @@ constructor
             rw [AdditionCommutative,AdditionCommutative (a1 * b1),AdditionEquality,MultiplicationCommutative,MultiplicationCommutative (s k),MultiplicationEquality _ _ _ (SuccessorNotEqualZero k)]
           right
           apply Quot.sound
-          rw [EquivalenceDifference,AdditionZero]
+          dsimp [Setoid.r]
+          rw [AdditionZero]
           rw [h_rel]
           rfl
         | inr inequality =>
@@ -842,7 +862,7 @@ constructor
             rw [AdditionAssociative (a2 * b2),AdditionCommutative (a2 * b2), AdditionEquality, AdditionCommutative, AdditionEquality, MultiplicationCommutative, MultiplicationCommutative (s k), MultiplicationEquality _ _ _ (SuccessorNotEqualZero k)]
           right
           apply Quot.sound
-          rw [EquivalenceDifference]
+          simp
           rw [h_rel,AdditionZero]
           rfl
 }
@@ -887,7 +907,7 @@ constructor
   intro h1
   rw [h1]
 }
--- Algebraic Manipulation for Multiplication
+-- Algebraic Manipulation for Interger part 2 (Multiplication)
 theorem IntergerMultiplicationSwap (a b c: Interger): a * b * c = a * c * b := by
 rw [IntergerMultiplicationAssociative,IntergerMultiplicationCommutative b,← IntergerMultiplicationAssociative]
 -- Rational Number Contruction
@@ -978,3 +998,89 @@ iseqv := by
       have k := Fraction.DenominatorNotEqualZero y
       exact k
   }
+def RationalNumber : Type := Quotient (inferInstance: Setoid Fraction)
+attribute [simp] EquivalenceFraction
+-- Define Rational Number Addition and subtraction
+def FractionAddition (a b : Fraction): Fraction :=
+{
+  Numerator:= a.Numerator*b.Denominator+b.Numerator*a.Denominator
+  Denominator := a.Denominator * b.Denominator
+  DenominatorNotEqualZero := by
+  {
+    intro h
+    rw [IntergerMultiplicationEqualZeroImplication] at h
+    cases h with
+    | inl h =>
+      apply Fraction.DenominatorNotEqualZero a
+      exact h
+    | inr h =>
+      apply Fraction.DenominatorNotEqualZero b
+      exact h
+  }
+}
+def FractionNegation (f : Fraction): Fraction :=
+{
+  Numerator := IntergerNegation (f.Numerator)
+  Denominator := f.Denominator
+  DenominatorNotEqualZero := by exact Fraction.DenominatorNotEqualZero f
+}
+def RationalNumber.ofNat: Nat → RationalNumber
+| 0 =>
+Quotient.mk (inferInstance : Setoid Fraction) {
+    Numerator := Interger.ofNat (0),
+    Denominator := 1,
+    DenominatorNotEqualZero := by
+    {
+      intro h
+      have h1 := Quotient.exact h
+      simp at *
+      contradiction
+    }
+  }
+| n + 1 =>
+Quotient.mk (inferInstance : Setoid Fraction) {
+    Numerator := Interger.ofNat (n+1),
+    Denominator := 1,
+    DenominatorNotEqualZero := by
+    {
+      intro h
+      have h1 := Quotient.exact h
+      simp at *
+      contradiction
+    }
+  }
+instance (n : Nat) : OfNat RationalNumber n where
+  ofNat := RationalNumber.ofNat n
+attribute [simp] FractionAddition RationalNumber.ofNat FractionNegation
+def RationalNumberAddition (a b: RationalNumber): RationalNumber :=
+Quotient.lift₂
+(fun f1 f2 => Quotient.mk (inferInstance: Setoid Fraction) (FractionAddition f1 f2))
+(
+  by
+  intro a1 b1 a2 b2 h1 h2
+  apply Quotient.sound
+  simp [IntergerMultiplicationRightDistributiveAddtion,← IntergerMultiplicationAssociative] at *
+  rw [IntergerMultiplicationAssociative b2.Denominator,IntergerMultiplicationCommutative a2.Denominator,h1,IntergerMultiplicationCommutative b2.Denominator (a2.Numerator * a1.Denominator)]
+  rw [IntergerMultiplicationSwap b2.Denominator,IntergerMultiplicationCommutative b2.Denominator,h2]
+  rw [IntergerMultiplicationCommutative (b1.Denominator * a1.Denominator)]
+  rw [IntergerMultiplicationCommutative (b1.Denominator * a1.Denominator)]
+  simp [IntergerMultiplicationSwap, ← IntergerMultiplicationAssociative]
+) a b
+def RationalNumberNegation (a: RationalNumber): RationalNumber :=
+Quotient.lift
+(fun f => Quotient.mk (inferInstance: Setoid Fraction) (FractionNegation f))
+(
+  by
+  intro f1 f2 h1
+  apply Quotient.sound
+  simp at *
+  rw [IntergerMultiplicationCommutative (IntergerNegation f1.Numerator) ]
+  rw [IntergerMultiplicationCommutative (IntergerNegation f2.Numerator)]
+  simp [IntergerMultiplicationIntergerNegation,h1, IntergerMultiplicationCommutative]
+) a
+def RationalNumberSubtraction (a b: RationalNumber): RationalNumber := RationalNumberAddition a  (RationalNumberNegation b)
+instance: Add RationalNumber where
+  add := RationalNumberAddition
+instance: Sub RationalNumber where
+  sub := RationalNumberSubtraction
+--
