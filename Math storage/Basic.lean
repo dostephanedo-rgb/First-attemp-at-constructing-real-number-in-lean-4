@@ -446,7 +446,7 @@ def Interger.ofNat : Nat → Interger
 | n + 1 => Quotient.mk (inferInstance: Setoid NaturalPair) (NaturalNumber.ofNat (n + 1), NaturalNumber.ofNat (0) )
 instance : OfNat Interger n where
   ofNat := Interger.ofNat (n)
-attribute [simp] HasEquiv.Equiv Setoid.r EquivalenceDifference Interger.ofNat NaturalNumber.ofNat
+attribute [simp] HasEquiv.Equiv Setoid.r EquivalenceDifference  NaturalNumber.ofNat Interger.ofNat
 -- define IntergerAddition and IntergerSubtraction
 def PairAddition (a b : NaturalPair):
 NaturalPair := (a.1+b.1, a.2+b.2)
@@ -662,6 +662,7 @@ def IntergerMultiplication : Interger → Interger → Interger :=
 instance: Mul Interger where
   mul:= IntergerMultiplication
 -- Addition property For interger
+@[simp]
 theorem IntergerAdditionZero (a : Interger): a + 0 = a := by
   induction a using Quot.ind with
   | _ x =>
@@ -699,6 +700,22 @@ theorem IntergerAdditionAssociative (a b c : Interger): a + b + c = a + ( b + c 
     | mk c1 c2 =>
       simp [Setoid.r,EquivalenceDifference, PairAddition]
       simp [AdditionAssociative]
+theorem IntergerNegationExpand (a b: Interger): IntergerNegation (a + b) = IntergerNegation a + IntergerNegation b := by
+induction a,b using Quotient.ind₂ with
+| _ a b =>
+cases a with
+| mk a1 a2
+cases b with
+| mk b1 b2
+apply Quotient.sound
+simp[PairNegation,PairAddition]
+theorem IntergerNegationSimplification (a: Interger): IntergerNegation (IntergerNegation a) = a := by
+induction a using Quotient.ind with
+| _ a =>
+cases a with
+| mk a1 a2 =>
+apply Quotient.sound
+simp [PairNegation]
 -- Algebraic Manipulation For interger part 1 (Addition and Subtraction)
 theorem IntergerEqualitySubtraction (a b : Interger): a = b ↔ a - b = 0 := by
   induction a using Quot.ind with
@@ -740,7 +757,7 @@ theorem IntergerSubtractionSimplication (a : Interger): a - a = 0 := by
     simp[Setoid.r,EquivalenceDifference,PairAddition,PairNegation,AdditionZero]
     rw [AdditionCommutative]
     rfl
-theorem IntergerAdditionSwap (a : Interger): a + b + c = a + c  + b := by
+theorem IntergerAdditionSwap (a b c : Interger): a + b + c = a + c  + b := by
 rw [IntergerAdditionAssociative,IntergerAdditionCommutative b,← IntergerAdditionAssociative]
 theorem IntergerEqualitySwapSubtraction (a b c: Interger): a - b = c ↔ a = c + b := by
 constructor
@@ -761,6 +778,7 @@ constructor
   rw [IntergerSubtractionSimplication,IntergerAdditionZero]
 }
 -- Multiplication Property
+@[simp]
 theorem IntergerMultiplicationZero (a: Interger): a*0 = 0 := by
   induction a using Quot.ind with
   | _ A =>
@@ -768,6 +786,7 @@ theorem IntergerMultiplicationZero (a: Interger): a*0 = 0 := by
     | mk a1 a2 =>
       apply Quot.sound
       simp [EquivalenceDifference,PairMultiplication, MultiplicationZero, AdditionZero]
+@[simp]
 theorem IntergerMultiplicationIdentity (a: Interger): a * 1 = a := by
   induction a using Quot.ind with
     | _ A =>
@@ -1078,9 +1097,195 @@ Quotient.lift
   rw [IntergerMultiplicationCommutative (IntergerNegation f2.Numerator)]
   simp [IntergerMultiplicationIntergerNegation,h1, IntergerMultiplicationCommutative]
 ) a
+@[simp]
 def RationalNumberSubtraction (a b: RationalNumber): RationalNumber := RationalNumberAddition a  (RationalNumberNegation b)
 instance: Add RationalNumber where
   add := RationalNumberAddition
 instance: Sub RationalNumber where
   sub := RationalNumberSubtraction
---
+-- Rational Number Addition and Subtraction property
+theorem RationalNumberSubtractionSimplification (a : RationalNumber): a +  RationalNumberNegation a = 0 := by
+induction a using Quotient.ind with
+| _ f =>
+  apply Quotient.sound
+  simp
+  change f.Numerator * f.Denominator + IntergerNegation f.Numerator * f.Denominator = 0 * (f.Denominator * f.Denominator)
+  rw [IntergerMultiplicationCommutative,IntergerMultiplicationCommutative (IntergerNegation f.Numerator),← IntergerMultiplicationLeftDistributiveAddition,IntergerMultiplicationCommutative 0]
+  change f.Denominator * (f.Numerator - f.Numerator) = f.Denominator * f.Denominator * 0
+  simp
+theorem RationalNumberAdditionZeroLeft (a : RationalNumber): a + 0 = a := by
+induction a using Quotient.ind with
+| _ f =>
+apply Quotient.sound
+simp
+change (f.Numerator + 0 * f.Denominator) * f.Denominator = f.Numerator * f.Denominator
+simp [IntergerMultiplicationCommutative]
+theorem RationalNumberAdditionCommutative (a b : RationalNumber): a + b = b + a := by
+induction a using Quotient.ind with
+| _ a =>
+induction b using Quotient.ind with
+| _ b =>
+  apply Quotient.sound
+  simp
+  rw [IntergerMultiplicationCommutative b.Denominator, IntergerMultiplicationEquality]
+  simp [IntergerAdditionCommutative]
+  intro h
+  rw [IntergerMultiplicationEqualZeroImplication] at h
+  cases h with
+  | inl h =>
+    apply Fraction.DenominatorNotEqualZero a
+    exact h
+  | inr h =>
+    apply Fraction.DenominatorNotEqualZero b
+    exact h
+theorem RationalNumberAdditionAssociative (a b c : RationalNumber): a + b + c = a + (b + c) := by
+induction a, b using Quotient.ind₂ with
+| _ a b =>
+induction c using Quotient.ind with
+| _ c =>
+  apply Quotient.sound
+  simp [IntergerMultiplicationRightDistributiveAddtion,IntergerMultiplicationLeftDistributiveAddition,← IntergerMultiplicationAssociative,IntergerMultiplicationSwap,← IntergerAdditionAssociative]
+-- Rational Number Addition and Subtraction property (for simplifying the equation)
+theorem RationalNumberAdditionZeroRight (a : RationalNumber): 0 + a = a := by
+simp [RationalNumberAdditionCommutative,RationalNumberAdditionZeroLeft]
+theorem RationalNumberAdditionSwap (a b c : RationalNumber): a + b + c = a + c + b := by
+simp [RationalNumberAdditionAssociative]
+rw [RationalNumberAdditionCommutative c]
+theorem RationalNumberAdditionReverseAssociative (a b c: RationalNumber): a + (b + c) = a + b + c := by
+rw [RationalNumberAdditionAssociative]
+theorem RationalNumberAdditionSimplification (a b: RationalNumber): a = b ↔ a + RationalNumberNegation b = 0 := by
+induction a,b using Quotient.ind₂ with
+| _ a b =>
+constructor
+{
+  intro h
+  apply Quotient.sound
+  simp
+  have h1 := Quotient.exact h
+  change a.Numerator*b.Denominator = b.Numerator * a.Denominator at h1
+  change a.Numerator * b.Denominator + IntergerNegation b.Numerator * a.Denominator = 0 * (a.Denominator * b.Denominator)
+  rw [h1,IntergerMultiplicationCommutative,IntergerMultiplicationCommutative (IntergerNegation b.Numerator),← IntergerMultiplicationLeftDistributiveAddition]
+  change a.Denominator * (b.Numerator - b.Numerator) = 0 * (a.Denominator * b.Denominator)
+  simp [IntergerMultiplicationCommutative]
+}
+{
+  intro h
+  apply Quotient.sound
+  have h1 := Quotient.exact h
+  simp at *
+  change a.Numerator * b.Denominator + IntergerNegation b.Numerator * a.Denominator = 0 * (a.Denominator * b.Denominator) at h1
+  simp [IntergerMultiplicationCommutative] at h1
+  rw [IntergerMultiplicationIntergerNegation] at h1
+  change a.Numerator * b.Denominator - (a.Denominator * b.Numerator) = 0 at h1
+  rw [← IntergerEqualitySubtraction] at h1
+  simp [h1,IntergerMultiplicationCommutative]
+}
+theorem RationalNumberAdditionNegationDistributive(a b: RationalNumber): RationalNumberNegation (a + b) = RationalNumberNegation a + RationalNumberNegation b := by
+induction a,b using Quotient.ind₂ with
+| _ a b
+apply Quotient.sound
+simp
+rw [IntergerMultiplicationEquality]
+simp [IntergerMultiplicationIntergerNegation,IntergerMultiplicationCommutative,IntergerNegationExpand]
+intro h
+rw [IntergerMultiplicationEqualZeroImplication] at h
+cases h with
+| inl h=>
+  apply Fraction.DenominatorNotEqualZero a
+  exact h
+| inr h=>
+  apply Fraction.DenominatorNotEqualZero b
+  exact h
+theorem rationalNumberNegationSimplification (a:RationalNumber): RationalNumberNegation (RationalNumberNegation a) = a  := by
+induction a using Quotient.ind with
+| _ a =>
+apply Quotient.sound
+simp
+rw [IntergerNegationSimplification]
+attribute [simp] RationalNumberSubtractionSimplification RationalNumberAdditionZeroLeft RationalNumberAdditionZeroRight RationalNumberAdditionSwap RationalNumberAdditionReverseAssociative RationalNumberAdditionSimplification RationalNumberAdditionNegationDistributive rationalNumberNegationSimplification
+-- Define Rational Number Multiplication and Division
+def FractionMultiplication (a b : Fraction): Fraction :=
+{
+  Numerator := a.Numerator * b.Numerator
+  Denominator := a.Denominator * b.Denominator
+  DenominatorNotEqualZero := by
+  {
+    intro h
+    rw [IntergerMultiplicationEqualZeroImplication] at h
+    cases h with
+    | inl h =>
+      apply Fraction.DenominatorNotEqualZero a
+      exact h
+    | inr h =>
+      apply Fraction.DenominatorNotEqualZero b
+      exact h
+  }
+}
+def FractionReciprocal (a: Fraction) (h:a.Numerator ≠ 0): Fraction :=
+{
+  Numerator := a.Denominator
+  Denominator := a.Numerator
+  DenominatorNotEqualZero := h
+}
+attribute [simp] FractionMultiplication FractionReciprocal
+def RationalNumberMultiplication (a b: RationalNumber): RationalNumber :=
+Quotient.lift₂
+(fun a b => Quotient.mk (inferInstance: Setoid Fraction) (FractionMultiplication a b))
+(
+  by
+  intro a1 b1 a2 b2 h1 h2
+  apply Quotient.sound
+  simp at *
+  simp [← IntergerMultiplicationAssociative]
+  rw [IntergerMultiplicationSwap a1.Numerator,h1,IntergerMultiplicationAssociative (a2.Numerator * a1.Denominator),h2]
+  simp [← IntergerMultiplicationAssociative,IntergerMultiplicationSwap]
+) a b
+set_option linter.unusedVariables false
+noncomputable def RationalNumberReciprocal (a: RationalNumber) (h: a ≠ 0): RationalNumber :=
+Quotient.lift (fun f:Fraction => Quotient.mk _ (if hf: f.Numerator = 0 then f else FractionReciprocal f hf))
+(
+  by
+  intro a1 a2 h1
+  apply Quotient.sound
+  simp at h1
+  have h2 := Classical.em (a1.Numerator = 0)
+  cases h2 with
+  | inl h2 =>
+    rw [h2] at h1
+    symm at h1
+    simp [IntergerMultiplicationCommutative,IntergerMultiplicationEqualZeroImplication]at h1
+    cases h1 with
+    | inl h1 =>
+      simp [h1,h2,IntergerMultiplicationCommutative]
+    | inr h1 =>
+      exfalso
+      apply Fraction.DenominatorNotEqualZero a1
+      exact h1
+  | inr h2 =>
+    {
+      have h3 : ¬ a2.Numerator = 0 := by
+      {
+        intro h
+        simp[h,IntergerMultiplicationCommutative,IntergerMultiplicationEqualZeroImplication] at h1
+        cases h1 with
+        | inl h1 =>
+        {
+          apply h2
+          exact h1
+        }
+        | inr h1 =>
+        {
+          apply Fraction.DenominatorNotEqualZero a2
+          exact h1
+        }
+      }
+      simp [h2,h3]
+      symm
+      rw [IntergerMultiplicationCommutative,h1,IntergerMultiplicationCommutative]
+    }
+)
+a
+noncomputable def RationalNumberDivision (a b : RationalNumber) (h:b ≠ 0):= RationalNumberMultiplication a (RationalNumberReciprocal b h)
+instance: Mul RationalNumber where
+  mul := RationalNumberMultiplication
+-- Rational Number Multiplication and Division property
