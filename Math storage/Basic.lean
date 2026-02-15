@@ -1289,3 +1289,120 @@ noncomputable def RationalNumberDivision (a b : RationalNumber) (h:b ≠ 0):= Ra
 instance: Mul RationalNumber where
   mul := RationalNumberMultiplication
 -- Rational Number Multiplication and Division property
+theorem RationalNumberDivisionSimplification (a:RationalNumber) (h:a≠0) : a * RationalNumberReciprocal a h = 1 := by
+induction a using Quotient.ind with
+| _ a =>
+  have h1 : a.Numerator ≠ 0 := by
+  {
+    intro h1
+    apply h
+    apply Quotient.sound
+    simp
+    show a.Numerator = 0 * a.Denominator
+    simp [IntergerMultiplicationCommutative]
+    exact h1
+  }
+  apply Quotient.sound
+  simp [h1]
+  change a.Numerator * a.Denominator = 1 * (a.Denominator * a.Numerator)
+  simp [IntergerMultiplicationCommutative]
+theorem RationalNumberMultiplicationZeroLeft (a:RationalNumber) : a * 0 = 0 := by
+induction a using Quotient.ind with
+| _ a =>
+apply Quotient.sound
+simp
+change a.Numerator * 0 = 0 * a.Denominator
+simp [IntergerMultiplicationCommutative]
+theorem RationalNumberMultiplicationIdentity (a:RationalNumber) : a * 1 = a := by
+induction a using Quotient.ind with
+| _ a =>
+apply Quotient.sound
+simp
+change a.Numerator * 1 * a.Denominator = _
+simp
+theorem RationalNumberMultiplicationCommutative (a b : RationalNumber): a * b = b * a := by
+induction a,b using Quotient.inductionOn₂ with
+| _ a b
+apply Quotient.sound
+simp [IntergerMultiplicationCommutative]
+theorem RationalNumberMultiplicationAssociative (a b c : RationalNumber): a * (b * c) = a * b * c := by
+induction a,b,c using Quotient.inductionOn₃ with
+| _ a b c
+apply Quotient.sound
+simp [IntergerMultiplicationAssociative]
+theorem RationalNumberMultiplicationLeftDistributiveAddition (a b c : RationalNumber): a * (b + c) = a * b + a * c := by
+induction a, b, c using Quotient.inductionOn₃ with
+| _ a b c
+apply Quotient.sound
+simp [IntergerMultiplicationLeftDistributiveAddition,← IntergerMultiplicationAssociative,IntergerMultiplicationRightDistributiveAddtion,IntergerMultiplicationSwap]
+theorem RationalNumberMultiplicationRightDistributiveAddition (a b c : RationalNumber): (a + b) * c = a * c + b * c := by
+simp [RationalNumberMultiplicationCommutative,RationalNumberMultiplicationLeftDistributiveAddition]
+theorem RationalNumberMultiplicationEqualZeroImplication (a b : RationalNumber) : a * b = 0 ↔ a = 0 ∨ b = 0 := by
+constructor
+{
+  intro h
+  induction a, b using Quotient.inductionOn₂ with
+  | _ a b =>
+  have equality := Quotient.exact h
+  conv at equality =>
+  {
+    simp
+    change _ = 0 * _
+    simp [IntergerMultiplicationCommutative,IntergerMultiplicationEqualZeroImplication]
+  }
+  cases equality with
+  | inl equality =>
+    left
+    apply Quotient.sound
+    simp
+    change _ = 0 * _
+    simp [IntergerMultiplicationCommutative]
+    exact equality
+  | inr equality =>
+    right
+    apply Quotient.sound
+    simp
+    change _ = 0 * _
+    simp [IntergerMultiplicationCommutative]
+    exact equality
+}
+{
+  intro h
+  cases h with
+  | inl h =>
+    simp [RationalNumberMultiplicationCommutative,RationalNumberMultiplicationZeroLeft,h]
+  | inr h =>
+    simp [RationalNumberMultiplicationZeroLeft,h]
+}
+theorem RationalNumberMultiplicationNotEqualZeroImplication (a b : RationalNumber) : a * b ≠ 0 ↔ a ≠ 0 ∧ b ≠ 0 := by
+constructor
+{
+  intro h
+  constructor
+  {
+    intro h1
+    apply h
+    rw [RationalNumberMultiplicationEqualZeroImplication]
+    left
+    exact h1
+  }
+  {
+    intro h1
+    apply h
+    rw [RationalNumberMultiplicationEqualZeroImplication]
+    right
+    exact h1
+  }
+}
+{
+  intro ⟨h2, h3⟩
+  intro h1
+  rw [RationalNumberMultiplicationEqualZeroImplication] at h1
+  cases h1 with
+  | inl h1 =>
+    apply h2
+    exact h1
+  | inr h1 =>
+    apply h3
+    exact h1
+}
