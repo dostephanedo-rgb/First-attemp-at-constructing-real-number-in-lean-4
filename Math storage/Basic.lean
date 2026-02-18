@@ -1289,6 +1289,48 @@ noncomputable def RationalNumberDivision (a b : RationalNumber) (h:b ≠ 0):= Ra
 instance: Mul RationalNumber where
   mul := RationalNumberMultiplication
 -- Rational Number Multiplication and Division property
+theorem RationalNumberReciprocalSimplification (a:RationalNumber) (h:a≠0) :
+have h1 : RationalNumberReciprocal a h ≠ 0 := by
+{
+  intro h1
+  induction a using Quotient.ind with
+  | _ a =>
+    have h2 : a.Numerator ≠ 0 := by
+    {
+      intro h2
+      apply h
+      apply Quotient.sound
+      simp
+      change _ = 0 * _
+      simp [IntergerMultiplicationCommutative]
+      exact h2
+    }
+    have h3 := Quotient.exact h1
+    simp [h2] at h3
+    change _ = 0 * _ at h3
+    simp [IntergerMultiplicationCommutative] at h3
+    apply Fraction.DenominatorNotEqualZero a
+    exact h3
+}
+RationalNumberReciprocal (RationalNumberReciprocal a h) h1 = a := by
+{
+  intro h1
+  induction a using Quotient.ind with
+  | _ a =>
+    have h2 : a.Numerator ≠ 0 := by
+    {
+      intro k
+      apply h
+      apply Quotient.sound
+      simp
+      change _ = 0 * _
+      simp [IntergerMultiplicationCommutative]
+      exact k
+    }
+    have h3 := Fraction.DenominatorNotEqualZero a
+    apply Quotient.sound
+    simp [h2,h3]
+}
 theorem RationalNumberDivisionSimplification (a:RationalNumber) (h:a≠0) : a * RationalNumberReciprocal a h = 1 := by
 induction a using Quotient.ind with
 | _ a =>
@@ -1306,20 +1348,34 @@ induction a using Quotient.ind with
   simp [h1]
   change a.Numerator * a.Denominator = 1 * (a.Denominator * a.Numerator)
   simp [IntergerMultiplicationCommutative]
-theorem RationalNumberMultiplicationZeroLeft (a:RationalNumber) : a * 0 = 0 := by
+theorem RationalNumberMultiplicationZeroRight (a:RationalNumber) : a * 0 = 0 := by
 induction a using Quotient.ind with
 | _ a =>
 apply Quotient.sound
 simp
 change a.Numerator * 0 = 0 * a.Denominator
 simp [IntergerMultiplicationCommutative]
-theorem RationalNumberMultiplicationIdentity (a:RationalNumber) : a * 1 = a := by
+theorem RationalNumberMultiplicationZeroLeft (a:RationalNumber) : 0 * a = 0 := by
+induction a using Quotient.ind with
+| _ a =>
+apply Quotient.sound
+simp
+change 0 * _ = 0 * _
+simp [IntergerMultiplicationCommutative]
+theorem RationalNumberMultiplicationIdentityRight (a:RationalNumber) : a * 1 = a := by
 induction a using Quotient.ind with
 | _ a =>
 apply Quotient.sound
 simp
 change a.Numerator * 1 * a.Denominator = _
 simp
+theorem RationalNumberMultiplicationIdentityLeft (a:RationalNumber) : 1 * a = a := by
+induction a using Quotient.ind with
+| _ a =>
+apply Quotient.sound
+simp [IntergerMultiplicationCommutative]
+change a.Denominator * (_ * 1) = _
+simp [IntergerMultiplicationCommutative]
 theorem RationalNumberMultiplicationCommutative (a b : RationalNumber): a * b = b * a := by
 induction a,b using Quotient.inductionOn₂ with
 | _ a b
@@ -1370,9 +1426,9 @@ constructor
   intro h
   cases h with
   | inl h =>
-    simp [RationalNumberMultiplicationCommutative,RationalNumberMultiplicationZeroLeft,h]
+    simp [RationalNumberMultiplicationCommutative,RationalNumberMultiplicationZeroRight,h]
   | inr h =>
-    simp [RationalNumberMultiplicationZeroLeft,h]
+    simp [RationalNumberMultiplicationZeroRight,h]
 }
 theorem RationalNumberMultiplicationNotEqualZeroImplication (a b : RationalNumber) : a * b ≠ 0 ↔ a ≠ 0 ∧ b ≠ 0 := by
 constructor
@@ -1406,3 +1462,81 @@ constructor
     apply h3
     exact h1
 }
+theorem RationalNumberDivisionDistribution (a b : RationalNumber) (h : a*b ≠ 0) :
+have h1 : a ≠ 0 := by
+{
+  rw [RationalNumberMultiplicationNotEqualZeroImplication] at h
+  exact h.left
+}
+have h2 : b ≠ 0 := by
+{
+  rw [RationalNumberMultiplicationNotEqualZeroImplication] at h
+  exact h.right
+}
+RationalNumberReciprocal (a*b) h = RationalNumberReciprocal a h1 * RationalNumberReciprocal b h2 := by
+{
+  intro h1 h2
+  induction a,b using Quotient.inductionOn₂ with
+  | _ a b =>
+    apply Quotient.sound
+    have mh1 : a.Numerator ≠ 0 := by
+    {
+      intro h
+      apply h1
+      apply Quotient.sound
+      simp
+      change a.Numerator = 0 * a.Denominator
+      simp [IntergerMultiplicationCommutative]
+      exact h
+    }
+    have mh2 : b.Numerator ≠ 0 := by
+    {
+      intro h
+      apply h2
+      apply Quotient.sound
+      simp
+      change _ = 0 * _
+      simp [IntergerMultiplicationCommutative]
+      exact h
+    }
+    have mh : a.Numerator * b.Numerator ≠ 0 := by
+    {
+      intro h
+      rw [IntergerMultiplicationEqualZeroImplication] at h
+      cases h with
+      | inl h =>
+        apply mh1
+        exact h
+      | inr h =>
+        apply mh2
+        exact h
+    }
+
+    simp [mh,mh1,mh2]
+}
+theorem RationalNumberMultiplicationNegationSimplificationLeft (a b : RationalNumber): a * RationalNumberNegation b = RationalNumberNegation ( a * b ) := by
+induction a,b using Quotient.inductionOn₂ with
+| _ a b =>
+apply Quotient.sound
+simp [IntergerMultiplicationIntergerNegation]
+theorem RationalNumberMultiplicationNegationSimplificationRight (a b : RationalNumber): RationalNumberNegation a * b = RationalNumberNegation (a * b):= by
+simp [RationalNumberMultiplicationCommutative,RationalNumberMultiplicationNegationSimplificationLeft]
+theorem RationalNumberMultiplicationEquality (a b c: RationalNumber) (h: c ≠ 0) : a * c = b * c ↔ a = b := by
+constructor
+{
+  intro h1
+  rw [RationalNumberAdditionSimplification,← RationalNumberMultiplicationNegationSimplificationRight,← RationalNumberMultiplicationRightDistributiveAddition,RationalNumberMultiplicationEqualZeroImplication] at h1
+  cases h1 with
+  | inl h1 =>
+    rw [← RationalNumberAdditionSimplification] at h1
+    exact h1
+  | inr h1 =>
+    exfalso
+    apply h
+    exact h1
+}
+{
+  intro h
+  rw [h]
+}
+attribute [simp] RationalNumberReciprocalSimplification RationalNumberDivisionSimplification RationalNumberDivisionDistribution RationalNumberMultiplicationZeroLeft RationalNumberMultiplicationZeroRight RationalNumberMultiplicationIdentityRight RationalNumberMultiplicationIdentityLeft RationalNumberMultiplicationAssociative RationalNumberMultiplicationLeftDistributiveAddition RationalNumberMultiplicationRightDistributiveAddition RationalNumberMultiplicationNegationSimplificationLeft RationalNumberMultiplicationNegationSimplificationRight
